@@ -1,6 +1,9 @@
 package com.reasure
 
+import com.reasure.util.MathUtil.toFloatArray
 import com.reasure.util.ShaderLoader
+import org.joml.Matrix4f
+import org.joml.times
 import org.lwjgl.Version
 import org.lwjgl.glfw.Callbacks
 import org.lwjgl.glfw.GLFW.*
@@ -13,6 +16,7 @@ import org.lwjgl.system.MemoryUtil.NULL
 class HelloWorld {
     private var window: Long = 0 // Window handle
     private var programID: Int = 0 // Shader program ID
+    private var matrixID: Int = 0 // "MVP" matrix ID
     private val vertexArrayID = IntArray(1) // Vertex Array ID
     private val vertexBuffer = IntArray(1) // Vertex Buffer ID
 
@@ -97,11 +101,13 @@ class HelloWorld {
 
     private fun loadShader() {
         programID = try {
-            ShaderLoader.loadShaders("SimpleVertexShader.vsh", "SimpleFragmentShader.fsh")
+//            ShaderLoader.loadShaders("SimpleVertexShader.vsh", "SimpleFragmentShader.fsh")
+            ShaderLoader.loadShaders("SimpleTransform.vsh", "SingleColor.fsh")
         } catch (e: Exception) {
             println("Error loading shaders: ${e.message}")
             0 // NULL
         }
+        matrixID = glGetUniformLocation(programID, "MVP")
     }
 
     // Create vertex buffer and load data
@@ -126,11 +132,41 @@ class HelloWorld {
         // Initialize OpenGL capabilities
         GL.createCapabilities()
 
+        // Set clear color
+        glClearColor(0.0f, 0.0f, 0.4f, 0.0f)
+
         // Load and compile shaders
         loadShader()
 
-        // Set clear color
-        glClearColor(0.0f, 0.0f, 0.4f, 0.0f)
+        // Projection matrix : 45° Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units
+        val projectionMatrix = Matrix4f().perspective(
+            Math.toRadians(45.0).toFloat(),
+            4.0f / 3.0f,
+            0.1f,
+            100.0f
+        )
+
+        // Or, for an ortho camera:
+//        val projectionMatrix = Matrix4f().ortho(
+//            // In world coordinates
+//            -10.0f, 10.0f, // left, right
+//            10.0f, 10.0f,  // top, bottom
+//            0.0f, 100.0f // zNear, zFar
+//        )
+
+        // Camera matrix
+        val viewMatrix = Matrix4f().lookAt(
+            4f, 3f, 3f, // Camera is at (4,3,3), in World Space
+            0f, 0f, 0f, // and looks at the origin
+            0f, 1f, 0f  // Head is up (set to 0,-1,0 to look upside-down)
+        )
+
+        // Model matrix : an identity matrix (model will be at the origin)
+        val modelMatrix = Matrix4f().identity()
+
+        // Our ModelViewProjection : multiplication of our 3 matrices
+        val mvpMatrix =
+            projectionMatrix * viewMatrix * modelMatrix // Remember, matrix multiplication is the other way around\
 
         // Create vertex array (VAO) and buffer
         glGenVertexArrays(vertexArrayID)
@@ -144,6 +180,10 @@ class HelloWorld {
 
             // Use our shader
             glUseProgram(programID)
+
+            // Send our transformation to the currently bound shader,
+            // in the "MVP" uniform
+            glUniformMatrix4fv(matrixID, false, mvpMatrix.toFloatArray())
 
             // 1st attribute buffer : vertices
             glEnableVertexAttribArray(0)

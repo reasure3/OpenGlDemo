@@ -1,4 +1,6 @@
 val lwjglVersion = "3.3.6"
+val jomlVersion = "1.10.7"
+val jomlPrimitivesVersion = "1.10.0"
 val lwjglNatives = "natives-windows"
 
 plugins {
@@ -31,6 +33,8 @@ dependencies {
     runtimeOnly("org.lwjgl", "lwjgl-opengl", classifier = lwjglNatives)
     runtimeOnly("org.lwjgl", "lwjgl-stb", classifier = lwjglNatives)
     runtimeOnly("org.lwjgl", "lwjgl-tinyfd", classifier = lwjglNatives)
+    implementation("org.joml", "joml", jomlVersion)
+    implementation("org.joml", "joml-primitives", jomlPrimitivesVersion)
 
     testImplementation(kotlin("test"))
 }
